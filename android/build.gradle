@@ -27,6 +27,8 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion 29
 
+    namespace "com.fascode.advertising_info"
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
