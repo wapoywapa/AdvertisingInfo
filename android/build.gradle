@@ -44,3 +44,6 @@ dependencies {
     api "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     api 'com.google.android.gms:play-services-ads-identifier:18.0.1'
 }
+
+
+//wtf is going on. why is this not updating
