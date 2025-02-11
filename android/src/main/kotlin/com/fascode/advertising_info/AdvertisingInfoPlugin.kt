@@ -3,7 +3,7 @@ package com.fascode.advertising_info
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import androidx.annotation.NonNull;
+import androidx.annotation.NonNull
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.BinaryMessenger
@@ -22,7 +22,7 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
     private fun onAttachedToEngine(applicationContext: Context, messenger: BinaryMessenger) {
         this.context = applicationContext
         this.channel = MethodChannel(messenger, "advertising_info")
-        this.channel.setMethodCallHandler(this);
+        this.channel.setMethodCallHandler(this)
     }
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -31,9 +31,20 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         if (call.method == "getAdvertisingInfo") {
+            // First, check if the AdvertisingIdClient class is available.
             try {
                 Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient")
-                thread {
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post {
+                    result.error("-1", "Internal Error", "AdvertisingIdClient class not found")
+                }
+                return
+            }
+
+            // Perform the advertising info lookup in a background thread.
+            thread {
+                try {
                     val adInfo = com.google.android.gms.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(context)
                     Handler(Looper.getMainLooper()).post {
                         result.success(
@@ -43,15 +54,16 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
                             )
                         )
                     }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Handler(Looper.getMainLooper()).post {
-                    result.error(
-                        "-1",
-                        "Internal Error",
-                        "Can not read AdvertisingIdInfo from GMS"
-                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Handle the error gracefully by returning an error result on the main thread.
+                    Handler(Looper.getMainLooper()).post {
+                        result.error(
+                            "-1",
+                            "Internal Error",
+                            "Failed to fetch Advertising ID. Please try again later."
+                        )
+                    }
                 }
             }
         } else {
@@ -62,7 +74,6 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
     }
-
 
     companion object {
         @JvmStatic
