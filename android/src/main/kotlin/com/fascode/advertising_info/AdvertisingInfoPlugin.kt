@@ -4,34 +4,26 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.NonNull
-
+import com.google.android.gms.ads.identifier.AdvertisingIdClient
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry.Registrar
 import kotlin.concurrent.thread
 
 /** AdvertisingInfoPlugin */
-class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
+class AdvertisingInfoPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
+
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
 
-    private fun onAttachedToEngine(applicationContext: Context, messenger: BinaryMessenger) {
-        this.context = applicationContext
-        this.channel = MethodChannel(messenger, "advertising_info")
-        this.channel.setMethodCallHandler(this)
-    }
-
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        onAttachedToEngine(flutterPluginBinding.applicationContext, flutterPluginBinding.binaryMessenger)
+        context = flutterPluginBinding.applicationContext
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "advertising_info")
+        channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
         if (call.method == "getAdvertisingInfo") {
-            // First, check if the AdvertisingIdClient class is available.
             try {
                 Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient")
             } catch (e: Exception) {
@@ -42,10 +34,9 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
                 return
             }
 
-            // Perform the advertising info lookup in a background thread.
             thread {
                 try {
-                    val adInfo = com.google.android.gms.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(context)
+                    val adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context)
                     Handler(Looper.getMainLooper()).post {
                         result.success(
                             mapOf(
@@ -56,7 +47,6 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // Handle the error gracefully by returning an error result on the main thread.
                     Handler(Looper.getMainLooper()).post {
                         result.error(
                             "-1",
@@ -73,13 +63,5 @@ class AdvertisingInfoPlugin : FlutterPlugin, MethodCallHandler {
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
-    }
-
-    companion object {
-        @JvmStatic
-        fun registerWith(registrar: Registrar) {
-            val instance = AdvertisingInfoPlugin()
-            instance.onAttachedToEngine(registrar.context(), registrar.messenger())
-        }
     }
 }
